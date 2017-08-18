@@ -1,6 +1,8 @@
 The Elevator Test (In PHP!)
 ==========================================
 
+<b>DESCRIPTION</b>
+
 First there is an elevator class.
 It has a direction (up, down, stand, maintenance), a current floor and a list of floor requests sorted in the direction.
 Each elevator has a set of signals: Alarm, Door open, Door close
@@ -19,3 +21,43 @@ Sample data:
 - Floor 2 and 4 are in maintenance.
 
 Extra Point: Making an API to send/receive requests to elevator and write log file.
+
+
+<b>ASSUMPTIONS</b>
+
+In order to fulfill this challenge without further clarification, several assumptions must be made.
+
+1) Assumption: Only one elevator is required
+
+Explanation: The second paragraph suggests that more than one elevator exist. However, the "Sample data" suggests that only one elevator will be required. If this challenge only requires one elevator then the second paragraph is rendered meaningless. 
+
+
+2) Assumption: I can determine for format of elevator commands.
+
+Explanation: The challenge description does not specify in what format the elevator commands are provided.
+
+
+3) Assumption: Set of signals is used for logging purposes only.
+
+Explanation: The description requires the signals but does not clarify in what way they should be used. My assumption is that this challenge was part of a larger challenge that was downsized but not refactored for clarity.
+
+
+4) Assumption: The application is intended to be stateless.
+
+Explanation: Typically with an elevator, one command comes in at a time; however, the challenge does not mention any form of statefulness (such as use of a database). This means that all the commands must be submitted at once. I have developed the application to separate a set of commands into two - the second command entering the queue after the first has been served. In this way my intention is to simulate a real-world environment as much as is possible.
+
+
+<b>LIST TO-DO</b>
+
+1) Correct the problems with the current flowchart
+
+2) Properly document code
+
+3) Create API service
+
+4) Add the logging feature
+
+5) Optimize code:
+    - Parsing of commands 
+    - Insertions of new requests (without needing to do re-sort each time)
+    - ?
