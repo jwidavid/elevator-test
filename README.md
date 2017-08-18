@@ -49,7 +49,7 @@ Explanation: Typically with an elevator, one command comes in at a time; however
 
 <b>LIST TO-DO</b>
 
-1) Correct the problems with the current flowchart
+1) <strike>Correct the problems with the current flowchart</strike>
 
 2) Properly document code
 
