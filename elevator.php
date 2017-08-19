@@ -11,7 +11,7 @@ $elevator = new Elevator();
 $elevator->current_floor_int = 1;
 
 
-$requests_arr = ['6d1','5u7','3d1','1u7'];
+$requests_arr = ['6d1','5u7','3d1','1u7']; 
 
 
 // Since order doesn't matter (array will be sorted) use pop to avoid 
@@ -27,4 +27,4 @@ while (count($requests_arr) > 0) {
 
 $elevator->serve_requests();
 
-print($elevator->get_requests_served_int());
+print($elevator->get_logs());

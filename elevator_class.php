@@ -13,11 +13,13 @@ class Elevator {
     private $signals_arr = ['alarm', 'door open', 'door close'];
     private $current_signal_str = '';
     private $requests_served_int = 0;
+    private $log_str = '';
+    private $floor_requests_sub_arr = [];
+    private $error_bool = False;
+    private $floor_last_served_int = 0;
     
-    private $floor_requests_sub_arr = array();
     
-    
-    function elevator($bot_floor_int=1, $top_floor_int=10) {
+    public function elevator($bot_floor_int=1, $top_floor_int=10) {
         $this->bot_floor_int = $bot_floor_int;
         $this->top_floor_int = $top_floor_int;    
     } 
@@ -34,11 +36,57 @@ class Elevator {
         while (count($this->floor_requests_arr) > 0) {
             
             $current_request_arr = $this->get_next_request();
+
+            if ($current_request_arr['floor'] != $this->floor_last_served_int) {
+                
+                if ($this->set_current_floor($current_request_arr['floor'])) {
+                    
+                    $this->floor_last_served_int = $current_request_arr['floor'];
+                    $this->add_to_log("Served floor ".$current_request_arr['floor']);
+    
+                    if ($this->set_current_signal('door open')) {
+                        $this->add_to_log("Signal set to 'door open'");
+                    }
+                    
+                    if ($this->set_current_signal('door close')) {
+                        $this->add_to_log("Signal set to 'door close'");
+                    }
+                }
+            }
             
-            $this->set_current_floor($current_request_arr['floor']);
+            
+            if ($this->error_bool) {
+                if ($this->set_current_signal('alarm')) {
+                    $this->add_to_log("Signal set to 'alarm'");
+                }
+                return False;
+            }
+            
+            
+            // Check to see if we now need to change directions
+            if ($current_request_arr['direction'] != $this->current_direction_str) {
+                
+                // Is the next floor above or below our current floor?
+                if ($this->set_current_direction($current_request_arr['direction'])) {
+                    $this->add_to_log("Switched directions to '".$current_request_arr['direction']."'");
+                }
+            }
+            
+            // Check to see if we need to change direction
+/*
+            $next_dir_str = $current_request_arr['floor'] > $this->current_floor_int ? 'up' : 'down';
+            
+            if ($next_dir_str != $this->current_direction_str) {
+                
+                if ($this->set_current_direction($next_dir_str)) {
+                    $this->add_to_log("Switched direction to '".$current_request_arr['direction']."'");
+                }
+            }
+*/
+            
             
             // Check if there is a floor_requests_sub_arr index that matches current_request_arr['request_id']
-            if(key_exists($current_request_arr['request_id'], $this->floor_requests_sub_arr)) {
+            if (key_exists($current_request_arr['request_id'], $this->floor_requests_sub_arr)) {
             
                 // If there is, then create a proper request array
                 $requested_floor_int = $this->floor_requests_sub_arr[$current_request_arr['request_id']];
@@ -64,6 +112,9 @@ class Elevator {
                     
                     // unfortunately, now we have to resort the array (see note in add_floor_request function)
                     $this->sort_floor_requests();
+                    
+                    // reverse the array so we can use pop
+                    $this->floor_requests_arr = array_reverse($this->floor_requests_arr);
                 }
             }
             
@@ -80,6 +131,7 @@ class Elevator {
         $this->floor_requests_arr[] = $request_arr;
         
         // Log this new request
+        return True;
     }
     
     public function parse_request($request_str) {
@@ -139,7 +191,16 @@ class Elevator {
         return $this->requests_served_int;
     }
     
+    public function get_logs() {
+        return $this->log_str;
+    }
     
+    
+    
+    private function add_to_log($message_str) {
+        $time = date("m.d.y H:i:s");
+        $this->log_str .= "{$time} - {$message_str}<br>";
+    }
     
     private function get_next_request() {
         
@@ -151,9 +212,9 @@ class Elevator {
             $this->floor_requests_arr[] = $next_request_arr;
             
             // Time to change directions, this is simple with an array_reverse
-            $this->floor_requests_arr = array_reverse($this->floor_requests_arr);
+            $this->floor_requests_arr = array_reverse($this->floor_requests_arr);                        
             
-            $next_request_arr = array_pop($this->floor_requests_arr);
+            $next_request_arr = array_pop($this->floor_requests_arr);                        
         }
         
         return $next_request_arr;
@@ -199,20 +260,37 @@ class Elevator {
     private function set_current_direction($new_direction_str) {
         
         if (in_array($new_direction_str, $this->direction_arr)) {
-            $this->current_direction_str = $new_direction_str;        
+            $this->current_direction_str = $new_direction_str;
+            return True;
+        }
+        else {
+            $this->error_bool = True;
+            return False;
         }
     }
     
     private function set_current_floor($new_floor_int) {
         
-        $this->current_floor_int = $new_floor_int;
+        if ($this->bot_floor_int <= $new_floor_int && $new_floor_int <= $this->top_floor_int) {
+            
+            $this->current_floor_int = $new_floor_int; 
+            return True;
+        } 
+
+        $this->error_bool = True;
+        return False;
     }
     
     private function set_current_signal($new_signal_str) {
         
         // verify that the new_signal_str is a valid direction
         if (in_array($new_signal_str, $this->signals_arr)) {
-            $this->current_signal_str = $new_signal_str;        
+            $this->current_signal_str = $new_signal_str;
+            return True;
+        }
+        else {
+            $this->error_bool = True;
+            return False;
         }
     }
     
