@@ -37,12 +37,43 @@ class Elevator {
             
             $current_request_arr = $this->get_next_request();
 
+
+            /*
+            // Check to see if we now need to change directions
+            if ($current_request_arr['direction'] != $this->current_direction_str) {
+                
+                // Is the next floor above or below our current floor?
+                if ($this->set_current_direction($current_request_arr['direction'])) {
+                    $this->add_to_log("Switched directions to '".$current_request_arr['direction']."'");
+                }
+            }
+            */
+            
+            // Check to see if we need to change direction
+            if ($current_request_arr['floor'] > $this->current_floor_int) {
+                $next_dir_str = 'up';
+            }
+            elseif ($current_request_arr['floor'] < $this->current_floor_int) {
+                $next_dir_str = 'down';
+            }            
+            else {
+                $next_dir_str = $this->current_direction_str;
+            }
+            
+            if ($next_dir_str != $this->current_direction_str) {
+                
+                if ($this->set_current_direction($next_dir_str)) {
+                    $this->add_to_log("Switched direction to '".$current_request_arr['direction']."'");
+                }
+            }
+
+
             if ($current_request_arr['floor'] != $this->floor_last_served_int) {
                 
                 if ($this->set_current_floor($current_request_arr['floor'])) {
                     
                     $this->floor_last_served_int = $current_request_arr['floor'];
-                    $this->add_to_log("Served floor ".$current_request_arr['floor']);
+                    $this->add_to_log("Positioned at floor ".$current_request_arr['floor']);
     
                     if ($this->set_current_signal('door open')) {
                         $this->add_to_log("Signal set to 'door open'");
@@ -62,27 +93,6 @@ class Elevator {
                 return False;
             }
             
-            
-            // Check to see if we now need to change directions
-            if ($current_request_arr['direction'] != $this->current_direction_str) {
-                
-                // Is the next floor above or below our current floor?
-                if ($this->set_current_direction($current_request_arr['direction'])) {
-                    $this->add_to_log("Switched directions to '".$current_request_arr['direction']."'");
-                }
-            }
-            
-            // Check to see if we need to change direction
-/*
-            $next_dir_str = $current_request_arr['floor'] > $this->current_floor_int ? 'up' : 'down';
-            
-            if ($next_dir_str != $this->current_direction_str) {
-                
-                if ($this->set_current_direction($next_dir_str)) {
-                    $this->add_to_log("Switched direction to '".$current_request_arr['direction']."'");
-                }
-            }
-*/
             
             
             // Check if there is a floor_requests_sub_arr index that matches current_request_arr['request_id']
