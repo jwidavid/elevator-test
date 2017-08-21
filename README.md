@@ -51,13 +51,14 @@ Explanation: Typically with an elevator, one command comes in at a time; however
 
 1) <strike>Correct the problems with the current flowchart</strike>
 
-2) Add the 'floors in maintenance' feature
+2) <strike>Add the 'floors in maintenance' feature</strike>
 
 3) Properly document code
 
 4) Create API service
 
-5) Add the logging feature
+5) <strike>Add the logging feature</strike>
+    - Add function to output logging to a log file
 
 6) Optimize code:
     - Parsing of commands 
