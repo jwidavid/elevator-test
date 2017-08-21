@@ -3,24 +3,38 @@
 
 class Elevator {
     
-    public $current_floor_int = 2;
+    private $current_floor_int = 1;
     
     private $bot_floor_int = 1;
     private $top_floor_int = 10;
-    private $current_direction_str = '';
+    
     private $direction_arr = ['up', 'down', 'stand', 'maintenance'];
-    private $floor_requests_arr = [];
+    private $current_direction_str = 'stand';
+    
     private $signals_arr = ['alarm', 'door open', 'door close'];
-    private $current_signal_str = '';
-    private $requests_served_int = 0;
-    private $log_str = '';
+    private $current_signal_str = 'door close';
+    
+    private $floor_requests_arr = [];
     private $floor_requests_sub_arr = [];
+    
+    private $maintenance_arr = [];
+    
     private $floor_last_served_int = 0;
     
+    private $log_str = '';
     
-    public function elevator($bot_floor_int=1, $top_floor_int=10) {
-        $this->bot_floor_int = $bot_floor_int;
-        $this->top_floor_int = $top_floor_int;    
+    
+    
+    public function elevator(array $args) {
+        
+        $this->bot_floor_int = isset($args['bot_floor_int']) ? $args['bot_floor_int'] : $this->bot_floor_int;
+        $this->top_floor_int = isset($args['top_floor_int']) ? $args['top_floor_int'] : $this->top_floor_int;
+        
+        $this->maintenance_arr = isset($args['maintenance_arr']) ? $args['maintenance_arr'] : $this->maintenance_arr;
+        
+        if (isset($args['current_floor_int'])) {
+            $this->set_current_floor($args['current_floor_int']);
+        }
     } 
 
     public function serve_requests() {
@@ -29,40 +43,25 @@ class Elevator {
         
         $this->sort_floor_requests();
         
-        $intt = 0;
-        
-        while (count($this->floor_requests_arr) > 0 && $intt < 200) {
-            
-            $intt++;
+        while (count($this->floor_requests_arr) > 0) {
             
             $current_request_arr = $this->get_next_request();
 
+            // Change directions
             if (!$current_request_arr) {
             
-                // Check to see if we need to change direction
-                if ($this->current_direction_str == 'up') {
-                    $next_dir_str = 'down';
-                }
-                else {
-                    $next_dir_str = 'up';
-                }
-                    
-                if ($this->set_current_direction($next_dir_str)) {                                    
-                    $this->add_to_log("Switched direction to '{$next_dir_str}'");
-                }
-                
-                $this->floor_requests_arr = array_reverse($this->floor_requests_arr);
+                $this->toggle_direction();                
                 
                 $current_request_arr = $this->get_next_request();
             }
 
-
+            // Only move if we're not serving another request from the same floor we last served
             if ($current_request_arr['floor'] != $this->floor_last_served_int) {
                 
                 if ($this->set_current_floor($current_request_arr['floor'])) {
                     
                     $this->floor_last_served_int = $current_request_arr['floor'];
-                    $this->add_to_log("Served floor ".$current_request_arr['floor']);
+                    $this->add_to_log("Serving floor ".$current_request_arr['floor']);
     
                     if ($this->set_current_signal('door open')) {
                         $this->add_to_log("Signal set to 'door open'");
@@ -72,55 +71,25 @@ class Elevator {
                         $this->add_to_log("Signal set to 'door close'");
                     }
                 }
-            }    
-            
-            
-            // Check if there is a floor_requests_sub_arr index that matches current_request_arr['request_id']
-            if (key_exists($current_request_arr['request_id'], $this->floor_requests_sub_arr)) {
-            
-                // If there is, then create a proper request array
-                $requested_floor_int = $this->floor_requests_sub_arr[$current_request_arr['request_id']];
-                
-                if ($requested_floor_int > $this->current_floor_int) {
-                    $requested_direction_str = 'up';
-                }
-                elseif ($requested_floor_int < $this->current_floor_int) {
-                    $requested_direction_str = 'down';
-                }
-                else {
-                    $requested_direction_str = $this->current_direction_str;
-                }
-                
-                $new_request_arr = [
-                    'floor' => $requested_floor_int,
-                    'direction' => $requested_direction_str,
-                    'request_id' => NULL
-                ];
-                
-                // Pass it into add_floor_request()
-                if ($this->add_floor_request($new_request_arr)) {
-                    
-                    // unfortunately, now we have to resort the array (see note in add_floor_request function)
-                    $this->sort_floor_requests();
-                    
-                    // reverse the array so we can use pop
-                    //$this->floor_requests_arr = array_reverse($this->floor_requests_arr);
-                }
             }
-            
-            $this->requests_served_int++;
+
+            $this->process_secondary_requests($current_request_arr);        
         }
     }
     
     public function add_floor_request($request_arr) {
         
         // Check if the requested floor is undergoing maintenance; if so, log the request then return false.
+        if (in_array($request_arr['floor'], $this->maintenance_arr)) {
+            $this->add_to_log("Request for floor ".$request_arr['floor']." denied - floor under maintenance.");
+            return False;
+        }
         
-        // For now we'll just add it to the end of the array and then sort it later
-        // Ideally, we would do a binary search and insert this new command specifically where we want
         $this->floor_requests_arr[] = $request_arr;
         
         // Log this new request
+        $this->add_to_log("Request for floor ".$request_arr['floor']." added to queue.");
+        
         return True;
     }
     
@@ -173,20 +142,58 @@ class Elevator {
         return $new_request_arr;
     }
     
-    public function get_floor_requests() {
-
-        return $this->floor_requests_arr;
-    }
-    
-    public function get_requests_served_int() {
-        return $this->requests_served_int;
-    }
-    
     public function get_logs() {
         return $this->log_str;
     }
     
     
+    
+    private function toggle_direction() {
+        if ($this->current_direction_str == 'up') {
+            $next_dir_str = 'down';
+        }
+        else {
+            $next_dir_str = 'up';
+        }
+            
+        if ($this->set_current_direction($next_dir_str)) {                                    
+            $this->add_to_log("Switched direction to '{$next_dir_str}'");
+        }
+        
+        $this->floor_requests_arr = array_reverse($this->floor_requests_arr);
+    }
+    
+    private function process_secondary_requests($current_request_arr) {
+        // Check if there is a floor_requests_sub_arr index that matches current_request_arr['request_id']
+        if (key_exists($current_request_arr['request_id'], $this->floor_requests_sub_arr)) {
+        
+            // If there is, then create a proper request array
+            $requested_floor_int = $this->floor_requests_sub_arr[$current_request_arr['request_id']];
+            
+            if ($requested_floor_int > $this->current_floor_int) {
+                $requested_direction_str = 'up';
+            }
+            elseif ($requested_floor_int < $this->current_floor_int) {
+                $requested_direction_str = 'down';
+            }
+            else {
+                $requested_direction_str = $this->current_direction_str;
+            }
+            
+            $new_request_arr = [
+                'floor' => $requested_floor_int,
+                'direction' => $requested_direction_str,
+                'request_id' => NULL
+            ];
+            
+            // Pass it into add_floor_request()
+            if ($this->add_floor_request($new_request_arr)) {
+                
+                // unfortunately, now we have to resort the array
+                $this->sort_floor_requests();
+            }
+        }
+    }
     
     private function get_next_request() {
         
@@ -262,8 +269,19 @@ class Elevator {
     
     private function set_current_floor($new_floor_int) {
         
-        if ($this->bot_floor_int <= $new_floor_int && $new_floor_int <= $this->top_floor_int) {
-            
+        if ($new_floor_int < $this->bot_floor_int) {
+            // log
+            $this->add_to_log('Warning - Elevator does not currently support basements. Default value chosen.');
+        }
+        elseif ($new_floor_int > $this->top_floor_int) {
+            // log
+            $this->add_to_log('Warning - Elevator cannot currently fly above top floor. Default value chosen.');
+        }
+        elseif (in_array($new_floor_int, $this->maintenance_arr)) {
+            // log
+            $this->add_to_log('Warning - Elevator position cannot be set to a floor under maintenance. Default value chosen.');
+        }
+        else {            
             $this->current_floor_int = $new_floor_int; 
             return True;
         } 

@@ -4,9 +4,15 @@
 require_once('elevator_class.php');
 
 
-$elevator = new Elevator();
+$args_arr = array(
+    'bot_floor_int' => 1,
+    'top_floor_int' => 10,
+    'maintenance_arr' => [2, 4],
+    'current_floor_int' => 2 
+);
 
 
+$elevator = new Elevator($args_arr);
 
 $requests_arr = ['6d1','5u7','3d1','1u7']; 
 
